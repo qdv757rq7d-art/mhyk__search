@@ -11,6 +11,14 @@ img { width: 200px; margin: 10px; cursor: pointer; }
   margin:4px; padding:6px 12px; border:2px solid #aaa; background:#f5f5f5;
   cursor:pointer; border-radius:6px; font-weight:bold;
 }
+  img {
+  max-width: 100%;
+  height: auto;
+}
+.card {
+  width: 90%;
+  max-width: 320px;
+}
 #numberButtons button.active, #nameButtons button.active { color:#fff; border-color:currentColor; }
 #result { display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-start; }
 .card img { display:block; width:auto; height:150px; margin-bottom:10px; }
@@ -24,9 +32,23 @@ img { width: 200px; margin: 10px; cursor: pointer; }
 .card-controls .button-row { display:flex; gap:4px; align-items:center; }
 .card-controls button.ssr-btn, .card-controls button.sr-btn, .card-controls button.r-btn { width:36px; height:36px; border-radius:6px; border:1px solid #aaa; cursor:pointer; }
 .card-controls textarea { width:100%; height:60px; resize:none; font-size:14px; }
-#modal { display:none; position:fixed; top:0; left:0; width:90%; height:auto; background-color: rgba(154,184,201,0.537); justify-content:center; align-items:center; z-index:9999; }
-#modal img { width:auto; height:90%; box-shadow:0 0 20px #fff; }
-/* 検索窓を大きく */
+#modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+#modal-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+}/* 検索窓を大きく */
 #search {  width: 400px;/* 横幅 */  height: 40px;/* 高さ */  font-size: 18px;/* 文字サイズ */  padding: 6px 10px;}
 #searchArea {  display: flex;  justify-content: center; /* 横中央 */  align-items: center;  gap: 10px;  margin: 30px 0;}
 #searchsss {  display: flex;  justify-content: center; /* 横中央 */  align-items: center;  gap: 10px;  margin: 30px 0;}
@@ -43,6 +65,27 @@ img { width: 200px; margin: 10px; cursor: pointer; }
 .toggle-on {  background:#fff;  color:#000;}/* 表示中（初期） */
 .toggle-off {  background:#000;  color:#fff;}/* 非表示 */
 
+@media (max-width: 600px) {
+  #result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card {
+    width: 92%;
+    max-width: none;
+    margin: 12px 0;
+  }
+}
+@media (max-width: 600px) {
+  .card img {
+    max-height: 180px;
+    object-fit: cover;
+  }
+}
+
+  
 </style>
 </head>
 <body>
