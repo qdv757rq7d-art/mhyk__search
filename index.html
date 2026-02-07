@@ -3,7 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <title>魔法使いの検索</title>
+<style>
+/* --- CSS は既存のまま --- */
+body { font-family: sans-serif; }
+img { width: 200px; margin: 10px; cursor: pointer; }
+#numberButtons button, #nameButtons button {
+  margin:4px; padding:6px 12px; border:2px solid #aaa; background:#f5f5f5;
+  cursor:pointer; border-radius:6px; font-weight:bold;
+}
+#numberButtons button.active, #nameButtons button.active { color:#fff; border-color:currentColor; }
+#result { display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-start; }
+.card img { display:block; width:auto; height:200px; margin-bottom:10px; }
+.card .description { flex-grow:1; display:flex; flex-direction:column; justify-content:center; }
+.tag-wrap { margin-top:6px; width:300px; display:flex; flex-wrap:wrap; gap:6px; }
+.tag { border:1px solid #aaa; border-radius:6px; padding:2px 8px; font-size:12px; background:#f5f5f5; white-space:nowrap; }
+.action-btn { height:44px; min-width:90px; padding:0 18px; font-size:18px; font-weight:bold; border-radius:8px; border:2px solid transparent; cursor:pointer; }
+.search-btn { background:#e0e0e0; color:#000; border-color:#aaa; }
+.clear-btn { background:#ff0000; color:#fff; border-color:#b03030; }
+.card-controls { display:flex; flex-direction:column; gap:6px; margin-top:6px; width:300px; border:1px solid #ddd; padding:6px; border-radius:6px; background:#f8f8f8; }
+.card-controls .button-row { display:flex; gap:4px; align-items:center; }
+.card-controls button.ssr-btn, .card-controls button.sr-btn, .card-controls button.r-btn { width:36px; height:36px; border-radius:6px; border:1px solid #aaa; cursor:pointer; }
+.card-controls textarea { width:100%; height:60px; resize:none; font-size:14px; }
+#modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(154,184,201,0.537); justify-content:center; align-items:center; z-index:9999; }
+#modal img { width:auto; height:100%; box-shadow:0 0 20px #fff; }
+/* 検索窓を大きく */
+#search {  width: 400px;/* 横幅 */  height: 40px;/* 高さ */  font-size: 18px;/* 文字サイズ */  padding: 6px 10px;}
+#searchArea {  display: flex;  justify-content: center; /* 横中央 */  align-items: center;  gap: 10px;  margin: 30px 0;}
+#searchsss {  display: flex;  justify-content: center; /* 横中央 */  align-items: center;  gap: 10px;  margin: 30px 0;}
+#searchsss button {
+  margin:4px;
+  padding:6px 12px;
+  border-radius:6px;
+  border:2px solid #000;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:16px;
+  min-width:130px;
+}
+.toggle-on {  background:#fff;  color:#000;}/* 表示中（初期） */
+.toggle-off {  background:#000;  color:#fff;}/* 非表示 */
 
+</style>
 </head>
 <body>
 <h2 style="text-align:center;">魔法使いの検索</h2>
