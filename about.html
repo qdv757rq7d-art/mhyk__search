@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ストーリー検索</title>
+<style>
+body {
+  font-family: sans-serif;
+  padding: 20px;
+}
+#numberButtons button, #nameButtons button {
+  margin:4px; padding:6px 12px; border:2px solid #aaa; background:#f5f5f5;
+  cursor:pointer; border-radius:6px; font-weight:bold;
+}
+#numberButtons button.active, #nameButtons button.active { color:#fff; border-color:currentColor; }
+
+/* 結果全体をグリッド表示 */
+#result {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* 1件ずつのカード */
+.story {
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+}
+
+/* タイトル＋種別を横並び */
+.story-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* タイトル */
+.story-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* 種別ラベル */
+.story-type {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eee;
+  white-space: nowrap;
+}
+
+/* 登場人物を少し小さく */
+.story .characters {
+  font-size: 12px;
+  color: #555;
+  margin-top: 6px;
+}
+
+/* メモ */
+.story .memo {
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+.story h3 .type {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #eee;
+}
+
+.story-type.login { background:#d9edf7; }
+.story-type.personal { background:#fde2e2; }
+
+.story:hover {
+  transform: translateY(-2px);
+}
+
+
+#toggleNameButtons {
+  margin: 8px 0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 2px solid #666;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#toggleNumberButtons {
+  margin: 8px 0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 2px solid #666;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.type-tabs button {
+  padding: 6px 14px;
+  border: 2px solid #666;
+  background: #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.type-tabs button.active {
+  background: #444;
+  color: #fff;
+}
+
+.type-tabs button[data-type="login"].active {
+  background: #d9edf7;
+  color: #31708f;
+  border-color: #31708f;
+}
+
+.type-tabs button[data-type="personal"].active {
+  background: #fde2e2;
+  color: #8a1f1f;
+  border-color: #8a1f1f;
+}
+.header-area {
+  display: flex;
+  flex-direction: column; /* 縦に並べる */
+  align-items: center;    /* 横方向中央 */
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.header-area h2 {
+  margin: 0;
+}
+
+.type-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+/* ボタン見た目（既存と合わせるなら調整OK） */
+.type-tabs button {
+  padding: 6px 14px;
+  border: 2px solid #666;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.type-tabs button.active {
+  background: #444;
+  color: #fff;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="header-area">
+  <h2>登場人物からストーリー検索</h2>
+
+  <div class="type-tabs" id="typeButtons">
+    <button data-type="login">ログインストーリー</button>
+    <button data-type="personal">個人ストーリー</button>
+  </div>
+</div>
+<hr>
+<button id="toggleNumberButtons">魔法使いを非表示</button>
+<div id="numberButtons"></div>
+<hr>
+<button id="toggleNameButtons">名前検索を表示</button>
+
+<div id="nameButtonsWrapper" style="display:none;">
+  <div id="nameButtons"></div>
+</div>
+<hr>
+<div id="result">名前を選んでください</div>
+
+<script>
+
+let activeType = null;
+const typeButtonsArea = document.getElementById("typeButtons");
+
+typeButtonsArea.querySelectorAll("button").forEach(btn => {
+  btn.onclick = () => {
+    const type = btn.dataset.type;
+
+    if (activeType === type) {
+      // 解除（両方オフ）
+      activeType = null;
+      btn.classList.remove("active");
+    } else {
+      // 排他ON
+      activeType = type;
+      typeButtonsArea.querySelectorAll("button").forEach(b =>
+        b.classList.remove("active")
+      );
+      btn.classList.add("active");
+    }
+
+    searchStories();
+  };
+});
+
+let isNumberButtonsVisible = true;
+document.getElementById("toggleNumberButtons").onclick = () => {
+  isNumberButtonsVisible = !isNumberButtonsVisible;
+
+  numberButtons.style.display = isNumberButtonsVisible ? "block" : "none";
+};
+
+
+
+/* =========================
+   登場人物（ボタン用）
+========================= */
+//================ キャラボタン =================
+const characterButtons = [
+  { name:"【中央】", num:["中央"], color:"#F7D551" },
+  { name:"オズ", num:["オズ"], color:"#890010" },
+  { name:"アーサー", num:["アーサー"], color:"#368EE9" },
+  { name:"カイン", num:["カイン"], color:"#F37D14" },
+  { name:"リケ", num:["リケ"], color:"#9776E7" },
+
+  { name:"【北】", num:["北"], color:"#9D65C5" },
+  { name:"スノウ", num:["スノウ"], color:"#A495BC" },
+  { name:"ホワイト", num:["ホワイト"], color:"#B0B0C6" },
+  { name:"ミスラ", num:["ミスラ"], color:"#5F2D8A" },
+  { name:"オーエン", num:["オーエン"], color:"#B9225F" },
+  { name:"ブラッドリー", num:["ブラッドリー"], color:"#1A6853" },
+
+  { name:"【東】", num:["東"], color:"#648CD6" },
+  { name:"ファウスト", num:["ファウスト"], color:"#5052A0" },
+  { name:"シノ", num:["シノ"], color:"#1E7CA6" },
+  { name:"ヒースクリフ", num:["ヒースクリフ"], color:"#6EBDCB" },
+  { name:"ネロ", num:["ネロ"], color:"#354B84" },
+
+  { name:"【西】", num:["西"], color:"#F18BB2" },
+  { name:"シャイロック", num:["シャイロック"], color:"#792736" },
+  { name:"ムル", num:["ムル"], color:"#9E399F" },
+  { name:"クロエ", num:["クロエ"], color:"#BB4C77" },
+  { name:"ラスティカ", num:["ラスティカ"], color:"#A78459" },
+
+  { name:"【南】", num:["南"], color:"#CEDC54" },
+  { name:"フィガロ", num:["フィガロ"], color:"#317887" },
+  { name:"ルチル", num:["ルチル"], color:"#CEB64F" },
+  { name:"レノックス", num:["レノックス"], color:"#586952" },
+  { name:"ミチル", num:["ミチル"], color:"#99B35A" },
+  { name:"全員", num:["全員"], color:"#000000" },
+  { name:"その他", num:["その他"], color:"#000000" },
+];
+
+
+const activeNumbers = new Set();
+const numberButtons = document.getElementById("numberButtons");
+
+characterButtons.forEach(ch => {
+  const btn = document.createElement("button");
+  btn.textContent = ch.name;
+
+  btn.onclick = () => {
+    if (activeNumbers.has(ch.num)) {
+      activeNumbers.delete(ch.num);
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    } else {
+      activeNumbers.add(ch.num); // ← ["クロエ","⑯"] みたいな配列が入る
+      btn.classList.add("active");
+      btn.style.background = ch.color;
+      btn.style.color = "#fff";
+    }
+    searchStories();
+  };
+
+  numberButtons.appendChild(btn);
+});
+
+
+// 一括リセットボタン作成（キャラボタンと同じ見た目）
+const resetButton = document.createElement("button");
+resetButton.textContent = "リセット";
+
+// キャラボタンと同じCSS
+resetButton.style.margin = "4px";
+resetButton.style.padding = "6px 12px";
+resetButton.style.border = "2px solid #ff0000"; // 赤っぽいボーダー
+resetButton.style.background = "#ff0000";      // 赤地
+resetButton.style.color = "#fff";              // 白文字
+resetButton.style.cursor = "pointer";
+resetButton.style.borderRadius = "6px";
+resetButton.style.fontWeight = "bold";
+
+
+
+
+// キャラボタンの後に追加
+numberButtons.appendChild(resetButton);
+
+
+
+//================ キャラボタン２ =================
+const characterButtonsByName = [
+  { name:"【中央】", num:"中央", color:"#F7D551" },
+  { name:"オズ", num:"①", color:"#890010" },
+  { name:"アーサー", num:"②", color:"#368EE9" },
+  { name:"カイン", num:"③", color:"#F37D14" },
+  { name:"リケ", num:"④", color:"#9776E7" },
+  { name:"【北】", num:"北", color:"#9D65C5" },
+  { name:"スノウ", num:"⑤", color:"#A495BC" },
+  { name:"ホワイト", num:"⑥", color:"#B0B0C6" },
+  { name:"ミスラ", num:"⑦", color:"#5F2D8A" },
+  { name:"オーエン", num:"⑧", color:"#B9225F" },
+  { name:"ブラッドリー", num:"⑨", color:"#1A6853" },
+  { name:"【東】", num:"東", color:"#648CD6" },
+  { name:"ファウスト", num:"⑩", color:"#5052A0" },
+  { name:"シノ", num:"⑪", color:"#1E7CA6" },
+  { name:"ヒースクリフ", num:"⑫", color:"#6EBDCB" },
+  { name:"ネロ", num:"⑬", color:"#354B84" },
+  { name:"【西】", num:"西", color:"#F18BB2" },
+  { name:"シャイロック", num:"⑭", color:"#792736" },
+  { name:"ムル", num:"⑮", color:"#9E399F" },
+  { name:"クロエ", num:"⑯", color:"#BB4C77" },
+  { name:"ラスティカ", num:"⑰", color:"#A78459" },
+  { name:"【南】", num:"南", color:"#CEDC54" },
+  { name:"フィガロ", num:"⑱", color:"#317887" },
+  { name:"ルチル", num:"⑲", color:"#CEB64F" },
+  { name:"レノックス", num:"⑳", color:"#586952" },
+  { name:"ミチル", num:"㉑", color:"#99B35A" },
+];
+
+const activeNames = new Set();
+const nameButtons = document.getElementById("nameButtons");
+
+characterButtonsByName.forEach(ch => {
+  const btn = document.createElement("button");
+  btn.textContent = ch.name;
+
+  btn.onclick = () => {
+    if (activeNames.has(ch.num)) {
+      activeNames.delete(ch.num);
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    } else {
+      activeNames.add(ch.num);
+      btn.classList.add("active");
+      btn.style.background = ch.color;
+      btn.style.color = "#fff";
+    }
+    searchStories(); // ここは既存の検索関数を呼ぶだけ
+  };
+
+  nameButtons.appendChild(btn);
+});
+
+// ================= 名前ボタン用リセット =================
+const resetNameButton = document.createElement("button");
+resetNameButton.textContent = "リセット";
+
+// キャラボタンと同じ見た目（赤地・白文字）
+resetNameButton.style.margin = "4px";
+resetNameButton.style.padding = "6px 12px";
+resetNameButton.style.border = "2px solid #ff0000";
+resetNameButton.style.background = "#ff0000";
+resetNameButton.style.color = "#fff";
+resetNameButton.style.cursor = "pointer";
+resetNameButton.style.borderRadius = "6px";
+resetNameButton.style.fontWeight = "bold";
+
+// クリック時の処理
+resetNameButton.onclick = () => {
+  activeNames.clear(); // 選択をリセット
+
+  // すべての名前ボタンを元に戻す（リセットボタン自身は除外）
+  nameButtons.querySelectorAll("button").forEach(btn => {
+    if (btn !== resetNameButton) {
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    }
+  });
+
+  searchStories(); // 必要なら検索結果も更新
+};
+
+// 名前ボタンの後に追加
+nameButtons.appendChild(resetNameButton);
+
+
+
+//ストーリーわけ
+
+
+
+const toggleBtn = document.getElementById("toggleNameButtons");
+const wrapper = document.getElementById("nameButtonsWrapper");
+
+toggleBtn.onclick = () => {
+  if (wrapper.style.display === "none") {
+    wrapper.style.display = "block";
+    toggleBtn.textContent = "名前検索を隠す";
+  } else {
+    wrapper.style.display = "none";
+    toggleBtn.textContent = "名前検索を表示";
+  }
+};
+
+
+/* =========================
+   ストーリー（Excel代替）
+========================= */
+const stories = [
+  //周年
+  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（１）中間試験を行います！" },
+  {title: "0.5 anniversary",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（２）中央の試験「私に従え」" },
+  {title: "0.5 anniversary",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（３）西の試験「賢者様を驚かせ」" },
+  {title: "0.5 anniversary",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（４）東の試験「私語カンニング厳禁・筆記試験」" },
+  {title: "0.5 anniversary",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "（５）南の試験「大きな花を咲かせること」" },
+  {title: "0.5 anniversary",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（６）北の試験「最後まで立っていること」" },
+  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（７）中間試験の結果発表" },
+ 
+  {title: "1st anniversary",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（１）北まほでカーケン・メテオル" },
+  {title: "1st anniversary",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（２）東まほでミモザサラダ" },
+  {title: "1st anniversary",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "（３）南まほでロリトデポロ" },
+  {title: "1st anniversary",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（４）西まほでパエリア？？" },
+  {title: "1st anniversary",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（５）中央まほでロブスター料理" },
+
+  {title: "1.5 anniversary",type: "login",  characters: ["スノウ","ホワイト","フィガロ"],memo: "（１）年長者たちで他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["ファウスト","レノックス"],memo: "（２）元主従の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["ブラッドリー","ネロ"],memo: "（３）元相棒の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["シャイロック","ムル"],memo: "（４）愛憎の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["オズ","アーサー"],memo: "（１０）強い絆の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["リケ","ミチル"],memo: "（５）仲良しの二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["ミスラ","ルチル"],memo: "（６）縁ある二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（７）師弟の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["カイン","オーエン"],memo: "（８）因縁の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["シノ","ヒースクリフ"],memo: "（９）幼馴染の二人で他己紹介" },
+
+ 
+ 
+  {title: "2.5 anniversary",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（１）西のパジャマパーティーwith恋バナ" },
+  {title: "2.5 anniversary",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（２）中央のパジャマパーティーwith大きなベッド" },
+  {title: "2.5 anniversary",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（３）東のパジャマパーティーwith…………。" },
+  {title: "2.5 anniversary",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "（４）南のパジャマパーティーwith昔話" },
+  {title: "2.5 anniversary",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（５）北のパジャマパーティーwith怪談話" },
+  
+  {title: "3.5 anniversary",type: "login",  characters: ["アーサー","ミスラ","ファウスト","ムル"],memo: "（１）休みの日を一緒に過ごすなら？：Let's go オズの城" },
+  {title: "3.5 anniversary",type: "login",  characters: ["オズ","スノウ","シノ","ラスティカ","レノックス"],memo: "（２）突っ込み不在：ペットを飼うなら？：みんなのペット" },
+  {title: "3.5 anniversary",type: "login",  characters: ["ホワイト","ヒースクリフ","フィガロ","ルチル"],memo: "（３）ファンサ：パーティをするなら？：水中パーティ" },
+  {title: "3.5 anniversary",type: "login",  characters: ["カイン","リケ","ネロ","シャイ"],memo: "（４）おめでとうのポーズ：一緒に料理をするなら？：BBQ+クレープ風" },
+  {title: "3.5 anniversary",type: "login",  characters: ["オーエン","ブラッドリー","クロエ","ミチル"],memo: "（５）誕生日の話：お揃いの衣装を着るなら？：誰が軸でも" },
+
+
+
+
+
+  {title: "5th anniversary",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（１）中央で絶景カフェin赤坂?名古屋?" },
+  {title: "5th anniversary",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（２）北でセキュリティ会社in北海道" },
+  {title: "5th anniversary",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（３）東で温泉旅館in東温泉" },
+  {title: "5th anniversary",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（４）西で探偵事務所in与那国島" },
+  {title: "5th anniversary",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "（５）南で病院in雲南市(島根)" },
+  {title: "魔法使いに花束を",type: "login",  characters: ["全員"],memo: "賢者様にも花束を" },
+  {title: "魔法使いに花束を",type: "login",  characters: ["その他","カナリア","クックロビン"],memo: "魔法使いに花束を" },
+
+
+
+  {title: "6th anniversary",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（１）中央と賢者(爪・文字・故郷・過ごす時間)" },
+  {title: "6th anniversary",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "（２）南と賢者(緊張・瞳・箒散歩・病気の知識)" },
+  {title: "6th anniversary",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（３）西と賢者(花火・お菓子と追いかけっこ・布と追いかけっこ・歌う魔女)" },
+  {title: "6th anniversary",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（４）東と賢者(魔道具・朝の市場・居眠り・隣にいる)" },
+  {title: "6th anniversary",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（５）北と賢者(大人は辛い・俺を信じろ・動物が好きだよね・究極進化超覚醒羊)" },
+
+
+ 
+ //新年
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "中央：あけおめ、ことよろ" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "西：たこあげは嫌" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "東：おせち？？？？" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "北：獅子舞で運試し" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["フィガロ","ルチル","レノックス","ミチル","南"],memo: "南：お年玉事件" },
+
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（１）お正月ごっこ/こたつ?でごろごろ?" },
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（２）流行り言葉大賞：おそかわ・紅茶・歌・花火" },
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（３）かくし芸大会(＝どんな魔法を使ったでしょう)：愛憎・元相棒・兄弟・つよきず" },
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（４）新春歌合戦：『漆黒の暁』『りんごと血しぶき』『肩まで』" },
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（５）『同じ視点で見ていた』『さらさらちゃん』『巻き毛ちゃん』" },
+
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["オズ","アーサー","カイン","リケ","中央"],memo: "（１）中央で魔法舎カルタ" },
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東","シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（２）西と東で福袋" },
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北","フィガロ","ルチル","レノックス","ミチル","南"],memo: "（３）北と南でおみくじ" },
+
+
+
+
+
+ //イベント 
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["シャイロック","ムル","クロエ","ラスティカ","西"],memo: "（１）西の魔法使いの休み方" },
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ","東"],memo: "（２）東の魔法使いの休み方" },
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー","北"],memo: "（３）北の魔法使いで褒め褒めゲーム" },
+
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["シノ","ネロ","ラスティカ"],memo: "（１）シノのための『地下宮殿に行きたかったのに』作詞作曲ラスティカwithネロ" },
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["オズ","カイン","ヒースクリフ"],memo: "（２）カイン的オズとの距離の詰め方と、ヒースのハードル" },
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["アーサー","ムル","クロエ"],memo: "（３）小さくなってサプライズ" },
+
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["アーサー","クロエ","ラスティカ"],memo: "（１）夢の卵のお洋服" },
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["オズ","リケ","ルチル"],memo: "（２）ゆで卵と生卵" },
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["シャイロック","レノックス"],memo: "（３）早起きと夜更かし。エッグノックを添えて" },
+  
+  
+  
+  
+  
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["ホワイト","ムル"],memo: "（１）ぶるぶるローズの特性ジュース" },
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（２）本物はきみの笑顔の輝きだけで" },
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["カイン","ブラッドリー"],memo: "（３）本物の宝石を見抜いて" },
+
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["シノ","ネロ","ルチル"],memo: "（１）アップルパイと応援" },
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["リケ","ミスラ","ラスティカ"],memo: "（２）リケのお勉強と芝居ごっこ" },
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["ブラッドリー","シャイロック"],memo: "（３）真昼のお誘い" },
+
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ネロ","ムル","ミチル"],memo: "（１）高級食材オルフェの巣" },
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["リケ","ミスラ","クロエ"],memo: "（２）執事ごっこ『帰ってきなさい、ご主人様』" },
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ブラッドリー","フィガロ"],memo: "（３）きみも執事にならないか？ホワイトのご機嫌取り" },
+
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ファウスト","シノ","ルチル"],memo: "（１）もう買ってある新聞と見出しの予想" },
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["アーサー","オーエン"],memo: "（２）ショートケーキは欠かさずに" },
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ホワイト","ブラッドリー","レノックス"],memo: "（３）レノの心からの賞賛で" },
+
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["アーサー","ミスラ","ネロ"],memo: "（１）がぶっと豪快に" },
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["オーエン","ルチル"],memo: "（２）甘くないケーキは" },
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["カイン","リケ","ファウスト"],memo: "（３）クリスマスの飾り付けと東の魔法使いらしさ" },
+
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["スノウ","ファウスト","クロエ"],memo: "（１）大富豪スノウwithクロエ・ファウスト" },
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["オズ","リケ","オーエン"],memo: "（２）甘いコーヒーに手間をかけて" },
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["カイン","ラスティカ"],memo: "（３）コーヒーとパスタと最高の応援" },
+
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["アーサー","ミチル"],memo: "（１）サンタさんの正体は？" },
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ミスラ","シノ","フィガロ"],memo: "（２）いい子の基準は？" },
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ヒースクリフ","シャイロック","レノックス"],memo: "（３）幹事のためのプレゼントを" },
+
+
+ 
+ //その他
+   {title: "空の下のティータイム",type: "login",  characters: ["ミスラ","ブラッドリー","ファウスト","ムル","ミチル"],memo: "～白雪舞うある日の一杯～" },
+   {title: "酒場で尽きないお喋りを",type: "login",  characters: ["オズ","ブラッドリー","ファウスト","シャイロック","ルチル"],memo: "報告書とグラタンと尽きないお喋りを" },
+
+
+
+ //個人
+  {title: "スポットの印象（１）",type: "personal",  characters: ["オズ"],memo: "アーサー" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["リケ"],memo: "アーサー" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["レノックス"],memo: "アーサー" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["リケ"],memo: "アーサー" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["カイン"],memo: "アーサー" },
+  {title: "アーサーへの印象（１）",type: "personal",  characters: ["オズ","アーサー"],memo: "アーサー" },
+  {title: "アーサーへの印象（２）",type: "personal",  characters: ["カイン"],memo: "アーサー" },
+  {title: "アーサーへの印象（３）",type: "personal",  characters: ["リケ"],memo: "アーサー" },
+  {title: "アーサーへの印象（４）",type: "personal",  characters: ["ファウスト"],memo: "アーサー" },
+  {title: "アーサーへの印象（５）",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["アーサー","レノックス"],memo: "アーサー" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "中央の国について",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットの人々",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "アーサーの特効薬",type: "personal",  characters: ["オズ","アーサー"],memo: "アーサー" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "危険な場所",type: "personal",  characters: ["オズ"],memo: "アーサー" },
+  {title: "アーサーの評判",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットの名物",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "スポットでの発見",type: "personal",  characters: ["オズ"],memo: "アーサー" },
+  {title: "楽しい場所",type: "personal",  characters: ["カイン"],memo: "アーサー" },
+  {title: "マナエリア",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "アミュレット",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "職業",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "家族",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "オズとの暮らし",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "頼れる魔法使い",type: "personal",  characters: ["アーサー","フィガロ"],memo: "アーサー" },
+  {title: "お茶目な友達",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "前賢者との思い出",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "本物の王子様",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "得意な魔法",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "アーサーの初めての魔法",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "紋章",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "大好物の為なら",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "今はあなたと",type: "personal",  characters: ["②"],memo: "アーサー" },
+  {title: "昔のようなひと時",type: "personal",  characters: ["オズ"],memo: "アーサー" },
+  {title: "パンケーキ論争",type: "personal",  characters: ["アーサー","ミスラ"],memo: "アーサー" },
+  {title: "勇敢で無垢な王子様",type: "personal",  characters: ["アーサー","クロエ"],memo: "アーサー" },
+  {title: "嘘つきは誰？",type: "personal",  characters: ["オズ","アーサー","カイン","リケ"],memo: "アーサー" },
+
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["ムル"],memo: "スノウ" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["アーサー"],memo: "スノウ" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["スノウ","ホワイト"],memo: "スノウ" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["オーエン"],memo: "スノウ" },
+  {title: "スポットの思い出(１)",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["ホワイト"],memo: "スノウ" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["フィガロ"],memo: "スノウ" },
+  {title: "スノウへの印象（１）",type: "personal",  characters: ["ホワイト"],memo: "スノウ" },
+  {title: "スノウへの印象（２）",type: "personal",  characters: ["ミスラ"],memo: "スノウ" },
+  {title: "スノウへの印象（３）",type: "personal",  characters: ["オーエン"],memo: "スノウ" },
+  {title: "スノウへの印象（４）",type: "personal",  characters: ["ブラッドリー"],memo: "スノウ" },
+  {title: "スノウへの印象（５）",type: "personal",  characters: ["オズ"],memo: "スノウ" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "スポットゆかりの話(２)",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "北の国について",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "スポットの人々",type: "personal",  characters: ["ホワイト"],memo: "スノウ" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["ブラッドリー"],memo: "スノウ" },
+  {title: "穴の中の調達者",type: "personal",  characters: ["シャイロック"],memo: "スノウ" },
+  {title: "危険な場所",type: "personal",  characters: ["オーエン"],memo: "スノウ" },
+  {title: "スノウの評判",type: "personal",  characters: ["ブラッドリー"],memo: "スノウ" },
+  {title: "スポットでの名物",type: "personal",  characters: ["ミスラ"],memo: "スノウ" },
+  {title: "スポットでの発見",type: "personal",  characters: ["オズ"],memo: "スノウ" },
+  {title: "楽しい場所",type: "personal",  characters: ["フィガロ"],memo: "スノウ" },
+  {title: "マナエリア",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "アミュレット",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "きらきらの正体は？",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "家族",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "双子の真剣勝負",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "オズへの親心",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "オズとしりとり",type: "personal",  characters: ["オズ","スノウ","ホワイト"],memo: "スノウ" },
+  {title: "お酒に酔いしれて",type: "personal",  characters: ["スノウ","クロエ"],memo: "スノウ" },
+  {title: "おまじない",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "得意な魔法",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "ラブレターの宛先",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "紋章",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "食べ過ぎ注意",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "スノウの日常",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "男前勝負",type: "personal",  characters: ["スノウ","フィガロ"],memo: "スノウ" },
+  {title: "可愛いは正義",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "特別サービス",type: "personal",  characters: ["⑤"],memo: "スノウ" },
+  {title: "北の魔法使いたちのお風呂事情",type: "personal",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー"],memo: "スノウ" },
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["ブラッドリー"],memo: "オーエン" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["カイン"],memo: "オーエン" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["ヒースクリフ"],memo: "オーエン" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["スノウ"],memo: "オーエン" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["ブラッドリー"],memo: "オーエン" },
+  {title: "オーエンへの印象（１）",type: "personal",  characters: ["スノウ"],memo: "オーエン" },
+  {title: "オーエンへの印象（２）",type: "personal",  characters: ["ホワイト"],memo: "オーエン" },
+  {title: "オーエンへの印象（３）",type: "personal",  characters: ["ミスラ"],memo: "オーエン" },
+  {title: "オーエンへの印象（４）",type: "personal",  characters: ["ブラッドリー"],memo: "オーエン" },
+  {title: "オーエンへの印象（５）",type: "personal",  characters: ["カイン"],memo: "オーエン" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "北の国について",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "オーエンのお願い",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "スポットの人々",type: "personal",  characters: ["シノ"],memo: "オーエン" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["ミスラ"],memo: "オーエン" },
+  {title: "危険な場所",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "オーエンの評判",type: "personal",  characters: ["カイン"],memo: "オーエン" },
+  {title: "スポットでの名物",type: "personal",  characters: ["ホワイト"],memo: "オーエン" },
+  {title: "スポットでの発見",type: "personal",  characters: ["ムル"],memo: "オーエン" },
+  {title: "楽しい場所",type: "personal",  characters: ["ミスラ"],memo: "オーエン" },
+  {title: "マナエリア",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "アミュレット",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "ケルベロスとお散歩",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "家族",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "オーエンから見たカイン",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "オーエンとミスラ",type: "personal",  characters: ["ミスラ","オーエン"],memo: "オーエン" },
+  {title: "お気に入り",type: "personal",  characters: ["オーエン","ブラッドリー"],memo: "オーエン" },
+  {title: "オーエンと和菓子",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "猫の通訳",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "特技",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "意地悪オーエン",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "紋章",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "歌声",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "怖がらせたい",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "期待はずれ",type: "personal",  characters: ["カイン","オーエン"],memo: "オーエン" },
+  {title: "怒ったり笑ったり",type: "personal",  characters: ["オーエン","ネロ"],memo: "オーエン" },
+  {title: "オーエンのイタズラ",type: "personal",  characters: ["⑧"],memo: "オーエン" },
+  {title: "怒らせ上手",type: "personal",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー"],memo: "オーエン" },
+
+  {title: "スポットの印象",type: "personal",  characters: ["スノウ"],memo: "ブラッドリー" },
+  {title: "ブレイクタイム",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["ミスラ","ブラッドリー"],memo: "ブラッドリー" },
+  {title: "ブラッドリーへの印象（１）",type: "personal",  characters: ["ホワイト"],memo: "ブラッドリー" },
+  {title: "ブラッドリーへの印象（２）",type: "personal",  characters: ["ミスラ"],memo: "ブラッドリー" },
+  {title: "ブラッドリーへの印象（３）",type: "personal",  characters: ["オーエン"],memo: "ブラッドリー" },
+  {title: "ブラッドリーへの印象（４）",type: "personal",  characters: ["ネロ"],memo: "ブラッドリー" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["ブラッドリー","スノウ","ホワイト"],memo: "ブラッドリー" },
+  {title: "時を超える声（１）",type: "personal",  characters: ["ブラッドリー"],memo: "ブラッドリー" },
+  {title: "時を超える声（２）",type: "personal",  characters: ["スノウ"],memo: "ブラッドリー" },
+  {title: "時を超える声（３）",type: "personal",  characters: ["ホワイト"],memo: "ブラッドリー" },
+  {title: "時を超える声（４）",type: "personal",  characters: ["ミスラ"],memo: "ブラッドリー" },
+  {title: "時を超える声（５）",type: "personal",  characters: ["オーエン"],memo: "ブラッドリー" },
+  {title: "時を超える声（６）",type: "personal",  characters: ["ネロ"],memo: "ブラッドリー" },
+  {title: "時を超える声（７）",type: "personal",  characters: ["ネロ"],memo: "ブラッドリー" },
+  {title: "時を超える声（８）",type: "personal",  characters: ["ミチル"],memo: "ブラッドリー" },
+  {title: "時を超える声（９）",type: "personal",  characters: ["スノウ","ホワイト"],memo: "ブラッドリー" },
+  {title: "北の国について",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "危険な場所",type: "personal",  characters: ["オーエン"],memo: "ブラッドリー" },
+  {title: "スポットの名物",type: "personal",  characters: ["ネロ"],memo: "ブラッドリー" },
+  {title: "楽しい場所",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "マナエリア",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "アミュレット",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "珍しい寝顔",type: "personal",  characters: ["ブラッドリー","ネロ"],memo: "ブラッドリー" },
+  {title: "家族",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "相棒の真意",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "魚の仕分けもお手の物",type: "personal",  characters: ["ブラッドリー","レノックス"],memo: "ブラッドリー" },
+  {title: "カード越しの眼差し",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "大乱闘はすぐそこに",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "得意な魔法",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "手入れもぬかりなく",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "紋章",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "肉こそ正義",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "刺激を求めて",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "つまみ食い犯を捕まえろ",type: "personal",  characters: ["リケ","ブラッドリー","ミチル"],memo: "ブラッドリー" },
+  {title: "一枚上手の心理戦",type: "personal",  characters: ["カイン","ブラッドリー"],memo: "ブラッドリー" },
+  {title: "物々交換の達人",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "男の勲章",type: "personal",  characters: ["⑨"],memo: "ブラッドリー" },
+  {title: "北の国の常識人？",type: "personal",  characters: ["スノウ","ホワイト","ミスラ","オーエン","ブラッドリー"],memo: "ブラッドリー" },
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["シノ"],memo: "ファウスト" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["ネロ"],memo: "ファウスト" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["フィガロ"],memo: "ファウスト" },
+  {title: "スポットの印象（４）",type: "personal",  characters: ["レノックス"],memo: "ファウスト" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["ファウスト","ヒースクリフ"],memo: "ファウスト" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ファウストへの印象（１）",type: "personal",  characters: ["シノ"],memo: "ファウスト" },
+  {title: "ファウストへの印象（２）",type: "personal",  characters: ["ヒースクリフ"],memo: "ファウスト" },
+  {title: "ファウストへの印象（３）",type: "personal",  characters: ["ネロ"],memo: "ファウスト" },
+  {title: "ファウストへの印象（４）",type: "personal",  characters: ["レノックス"],memo: "ファウスト" },
+  {title: "ファウストへの印象（５）",type: "personal",  characters: ["フィガロ"],memo: "ファウスト" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "東の国について",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "嵐の谷での暮らし",type: "personal",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ"],memo: "ファウスト" },
+  {title: "スポットの人々",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "危険な場所",type: "personal",  characters: ["アーサー","ファウスト"],memo: "ファウスト" },
+  {title: "ファウストの評判",type: "personal",  characters: ["ネロ"],memo: "ファウスト" },
+  {title: "スポットの名物",type: "personal",  characters: ["ヒースクリフ"],memo: "ファウスト" },
+  {title: "スポットでの発見",type: "personal",  characters: ["シノ"],memo: "ファウスト" },
+  {title: "楽しい場所",type: "personal",  characters: ["ラスティカ"],memo: "ファウスト" },
+  {title: "マナエリア",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "アミュレット",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "鏡の話",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "家族",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "若い魔法使いたちへ",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "師匠と従者",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "放っておけない",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "危険な落し物",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ファウストの得意な魔法",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ファウストのこと",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ファウストの紋章",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "ファウストと朝食",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "お土産をファウストに",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "先生のお仕事",type: "personal",  characters: ["ファウスト","フィガロ"],memo: "ファウスト" },
+  {title: "気の合う二人？",type: "personal",  characters: ["オズ","ファウスト"],memo: "ファウスト" },
+  {title: "東の国の先生は",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "賢者と猫とファウストと",type: "personal",  characters: ["⑩"],memo: "ファウスト" },
+  {title: "東の国の反省会",type: "personal",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ"],memo: "ファウスト" },
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["ファウスト"],memo: "ネロ" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["ヒースクリフ"],memo: "ネロ" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["リケ"],memo: "ネロ" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["ブラッドリー"],memo: "ネロ" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["ファウスト"],memo: "ネロ" },
+  {title: "ネロへの印象（１）",type: "personal",  characters: ["ファウスト"],memo: "ネロ" },
+  {title: "ネロへの印象（２）",type: "personal",  characters: ["シノ"],memo: "ネロ" },
+  {title: "ネロへの印象（３）",type: "personal",  characters: ["ヒースクリフ"],memo: "ネロ" },
+  {title: "ネロへの印象（４）",type: "personal",  characters: ["ブラッドリー"],memo: "ネロ" },
+  {title: "ネロへの印象（５）",type: "personal",  characters: ["リケ"],memo: "ネロ" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "東の国について",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "ネロのささやかな夢",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "スポットの人々",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "危険な場所",type: "personal",  characters: ["ヒースクリフ"],memo: "ネロ" },
+  {title: "ネロの評判",type: "personal",  characters: ["ブラッドリー"],memo: "ネロ" },
+  {title: "スポットの名物",type: "personal",  characters: ["シャイロック"],memo: "ネロ" },
+  {title: "スポットでの発見",type: "personal",  characters: ["シノ"],memo: "ネロ" },
+  {title: "楽しい場所",type: "personal",  characters: ["シノ"],memo: "ネロ" },
+  {title: "マナエリア",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "アミュレット",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "キッチンの見物人",type: "personal",  characters: ["オズ","ネロ"],memo: "ネロ" },
+  {title: "家族",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "何でもない毎日",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "おねだり上手",type: "personal",  characters: ["リケ","ネロ"],memo: "ネロ" },
+  {title: "本日の買い出し班",type: "personal",  characters: ["リケ","ネロ"],memo: "ネロ" },
+  {title: "力仕事の賜物",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "繊細な優しさ",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "得意な魔法",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "お手軽ピッキング",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "紋章",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "求：包丁スキル",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "就寝前のティータイム",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "余り物のおすそ分け",type: "personal",  characters: ["ファウスト","ネロ"],memo: "ネロ" },
+  {title: "衛生管理の鬼",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "秘密の口止め料",type: "personal",  characters: ["⑬"],memo: "ネロ" },
+  {title: "授業参観",type: "personal",  characters: ["ファウスト","シノ","ヒースクリフ","ネロ"],memo: "ネロ" },
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["クロエ"],memo: "シャイロック" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["ネロ"],memo: "シャイロック" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["シノ"],memo: "シャイロック" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["シャイロック","ムル"],memo: "シャイロック" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["シャイロック","ムル"],memo: "シャイロック" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["ムル"],memo: "シャイロック" },
+  {title: "シャイロックへの印象（１）",type: "personal",  characters: ["ムル"],memo: "シャイロック" },
+  {title: "シャイロックへの印象（２）",type: "personal",  characters: ["クロエ"],memo: "シャイロック" },
+  {title: "シャイロックへの印象（３）",type: "personal",  characters: ["ラスティカ"],memo: "シャイロック" },
+  {title: "シャイロックへの印象（４）",type: "personal",  characters: ["カイン","スノウ","ホワイト"],memo: "シャイロック" },
+  {title: "シャイロックへの印象（５）",type: "personal",  characters: ["フィガロ"],memo: "シャイロック" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "西の国について",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "友好の証",type: "personal",  characters: ["シャイロック","フィガロ"],memo: "シャイロック" },
+  {title: "スポットの人々",type: "personal",  characters: ["ムル"],memo: "シャイロック" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "危険な場所",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "シャイロックの評判",type: "personal",  characters: ["クロエ"],memo: "シャイロック" },
+  {title: "スポットの名物",type: "personal",  characters: ["ラスティカ"],memo: "シャイロック" },
+  {title: "スポットでの発見",type: "personal",  characters: ["シャイロック","レノックス"],memo: "シャイロック" },
+  {title: "凄腕の交渉術",type: "personal",  characters: ["オズ","ラスティカ"],memo: "シャイロック" },
+  {title: "マナエリア",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "アミュレット",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "嘘と悪戯",type: "personal",  characters: ["シャイロック","ムル"],memo: "シャイロック" },
+  {title: "家族",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "友人への想い",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "素敵な夢",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "嘘と微笑み",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "感じたこと",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "気分転換",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "得意な魔法",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "私とダンスを",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "紋章",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "猫への仕掛け",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "秘密のプレゼント",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "眺めるために",type: "personal",  characters: ["シャイロック","ムル"],memo: "シャイロック" },
+  {title: "寿命のグラス",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "カクテルの秘密",type: "personal",  characters: ["⑭"],memo: "シャイロック" },
+  {title: "月明りの下で",type: "personal",  characters: ["シャイロック","ムル","クロエ","ラスティカ"],memo: "シャイロック" },
+
+  {title: "スポットの印象（１）",type: "personal",  characters: ["クロエ"],memo: "ムル" },
+  {title: "スポットの印象（２）",type: "personal",  characters: ["カイン"],memo: "ムル" },
+  {title: "スポットの印象（３）",type: "personal",  characters: ["ルチル"],memo: "ムル" },
+  {title: "ブレイクタイム（１）",type: "personal",  characters: ["ムル","ラスティカ"],memo: "ムル" },
+  {title: "ブレイクタイム（２）",type: "personal",  characters: ["シャイロック"],memo: "ムル" },
+  {title: "スポットの思い出（１）",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "スポットの思い出（２）",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "スポットの思い出（３）",type: "personal",  characters: ["シャイロック"],memo: "ムル" },
+  {title: "ムルへの印象（１）",type: "personal",  characters: ["シャイロック"],memo: "ムル" },
+  {title: "ムルへの印象（２）",type: "personal",  characters: ["クロエ"],memo: "ムル" },
+  {title: "ムルへの印象（３）",type: "personal",  characters: ["ラスティカ"],memo: "ムル" },
+  {title: "ムルへの印象（４）",type: "personal",  characters: ["シノ","ムル"],memo: "ムル" },
+  {title: "ムルへの印象（５）",type: "personal",  characters: ["レノックス"],memo: "ムル" },
+  {title: "スポットゆかりの話（１）",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "スポットゆかりの話（２）",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "西の国について",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "〈大いなる厄災〉について",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "一晩中俺と",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "スポットの人々",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "スポットにいた魔法使い",type: "personal",  characters: ["ラスティカ"],memo: "ムル" },
+  {title: "危険な場所",type: "personal",  characters: ["クロエ"],memo: "ムル" },
+  {title: "ムルの評判",type: "personal",  characters: ["シャイロック"],memo: "ムル" },
+  {title: "スポットの名物",type: "personal",  characters: ["リケ"],memo: "ムル" },
+  {title: "スポットでの発見",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "楽しい場所",type: "personal",  characters: ["ラスティカ"],memo: "ムル" },
+  {title: "マナエリア",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "アミュレット",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "ムルとかくれんぼ",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "家族",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "シャイロックとの思い出",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "魔法使い当てゲーム",type: "personal",  characters: ["ミスラ","ブラッドリー","シャイロック","ムル"],memo: "ムル" },
+  {title: "ムルの役目",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "月の秘密",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "ムルと休息",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "得意な魔法",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "ムルと空のお散歩",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "紋章",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "眠れない夜",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "とびきりのアイテム",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "見習いムル",type: "personal",  characters: ["シャイロック","ムル"],memo: "ムル" },
+  {title: "探求熱心",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "ムルとおままごと",type: "personal",  characters: ["⑮"],memo: "ムル" },
+  {title: "旅行プラン",type: "personal",  characters: ["シャイロック","ムル","クロエ","ラスティカ"],memo: "ムル" },
+
+
+
+  {
+    title: "泣いた理由",
+    type: "personal", // ← 個人
+    characters: ["シノ","⑪","ヒースクリフ","⑫","晶"],
+    memo: "スポット個人ストーリー"
+  }
+];
+
+
+/* =========================
+   検索処理（Excelフィルタ）
+========================= */
+function searchByName(name) {
+  const result = stories.filter(story =>
+    story.characters.includes(name)
+  );
+  showResult(result, name);
+}
+
+/* =========================
+   結果表示（統合版）
+========================= */
+function searchStories() {
+  const resultArea = document.getElementById("result");
+  resultArea.innerHTML = "";
+
+  const selectedNumberGroups = Array.from(activeNumbers); // 番号・複合
+  const selectedNames = Array.from(activeNames);          // 名前のみ
+
+  const results = stories.filter(story => {
+
+    // ① 種別フィルタ
+    if (activeType && story.type !== activeType) {
+      return false;
+    }
+
+    // ② 番号ボタン AND検索
+    if (selectedNumberGroups.length > 0) {
+      const okByNumber = selectedNumberGroups.every(group =>
+        group.some(key => story.characters.includes(key))
+      );
+      if (!okByNumber) return false;
+    }
+
+    // ③ 名前ボタン AND検索
+if (selectedNames.length > 0) {
+    const okByName = selectedNames.every(name =>
+    story.characters.includes(name)
+  );
+  if (!okByName) return false;
+}
+
+    return true;
+  });
+
+  if (results.length === 0) {
+    resultArea.textContent = "該当するストーリーはありません";
+    return;
+  }
+
+  results.forEach(story => {
+    const div = document.createElement("div");
+    div.className = "story";
+   div.innerHTML = `
+  <div class="story-header">
+    <h3>${story.title}</h3>
+    <span class="story-type ${story.type}">
+        ${story.type === "login" ? "ログイン" : "個人"}
+    </span>
+  </div>
+
+  <div class="memo">
+    『${story.memo ?? "（なし）"}』
+
+  <div class="characters">
+    登場人物：${story.characters.join("、")}
+  </div>
+
+  </div>
+`;
+
+    resultArea.appendChild(div);
+  });
+}
+
+resetButton.onclick = () => {
+  activeNumbers.clear();
+  activeNames.clear();
+  activeType = null;
+
+  numberButtons.querySelectorAll("button").forEach(btn => {
+    if (btn !== resetButton) {
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    }
+  });
+
+  nameButtons.querySelectorAll("button").forEach(btn => {
+    if (btn !== resetNameButton) {
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    }
+  });
+
+  document.querySelectorAll("#typeButtons button").forEach(btn => {
+    btn.classList.remove("active");
+    btn.style.background = "";
+    btn.style.color = "";
+  });
+
+  searchStories();
+};
+
+
+</script>
+
+</body>
+</html>
