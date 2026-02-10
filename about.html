@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>ストーリー検索</title>
   <a href="index.html">トップに戻る</a>
+
 <style>
 body {
   font-family: sans-serif;
@@ -163,6 +164,34 @@ body {
   background: #444;
   color: #fff;
 }
+.story .date {
+  font-size: 11px;
+  color: #666;
+}
+
+#sortButtons {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+#sortToggleBtn {
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 2px solid #31708f;
+  background: #d9edf7;
+  color: #31708f;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* 古い順のとき */
+#sortToggleBtn.old {
+  background: #fde2e2;
+  border-color: #8a1f1f;
+  color: #8a1f1f;
+}
 
 
 </style>
@@ -177,6 +206,9 @@ body {
     <button data-type="login">ログインストーリー</button>
     <button data-type="personal">個人ストーリー</button>
   </div>
+</div>
+<div id="sortButtons">
+  <button id="sortToggleBtn">新しい順</button>
 </div>
 <hr>
 <button id="toggleNumberButtons">魔法使いを非表示</button>
@@ -211,6 +243,10 @@ typeButtonsArea.querySelectorAll("button").forEach(btn => {
       );
       btn.classList.add("active");
     }
+    
+ const sortButtonsArea = document.getElementById("sortButtons");
+  sortButtonsArea.style.display =
+    activeType === "login" ? "block" : "none";
 
     searchStories();
   };
@@ -421,139 +457,169 @@ toggleBtn.onclick = () => {
 };
 
 
+
+let activeSort = "new"; // 初期は新しい順
+const sortToggleBtn = document.getElementById("sortToggleBtn");
+
+sortToggleBtn.onclick = () => {
+  if (activeSort === "new") {
+    activeSort = "old";
+    sortToggleBtn.textContent = "古い順";
+    sortToggleBtn.classList.add("old");
+  } else {
+    activeSort = "new";
+    sortToggleBtn.textContent = "新しい順";
+    sortToggleBtn.classList.remove("old");
+  }
+
+  searchStories();
+};
+
+
+
+
+
+
+
+
+
+
 /* =========================
    ストーリー（Excel代替）
 ========================= */
 const stories = [
   //周年
-  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（１）中間試験を行います！" },
-  {title: "0.5 anniversary",type: "login",  characters: ["中央"],memo: "（２）中央の試験「私に従え」" },
-  {title: "0.5 anniversary",type: "login",  characters: ["西"],memo: "（３）西の試験「賢者様を驚かせ」" },
-  {title: "0.5 anniversary",type: "login",  characters: ["東"],memo: "（４）東の試験「私語カンニング厳禁・筆記試験」" },
-  {title: "0.5 anniversary",type: "login",  characters: ["南"],memo: "（５）南の試験「大きな花を咲かせること」" },
-  {title: "0.5 anniversary",type: "login",  characters: ["北"],memo: "（６）北の試験「最後まで立っていること」" },
-  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（７）中間試験の結果発表" },
+  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（１）中間試験を行います！" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["中央"],memo: "（２）中央の試験「私に従え」" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["西"],memo: "（３）西の試験「賢者様を驚かせ」" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["東"],memo: "（４）東の試験「私語カンニング厳禁・筆記試験」" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["南"],memo: "（５）南の試験「大きな花を咲かせること」" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["北"],memo: "（６）北の試験「最後まで立っていること」" ,date: "2020-05-11"},
+  {title: "0.5 anniversary",type: "login",  characters: ["オズ","スノウ","ホワイト","ファウスト","シャイロック","フィガロ"],memo: "（７）中間試験の結果発表" ,date: "2020-05-11"},
  
-  {title: "1st anniversary",type: "login",  characters: ["北"],memo: "（１）北まほでカーケン・メテオル" },
-  {title: "1st anniversary",type: "login",  characters: ["東"],memo: "（２）東まほでミモザサラダ" },
-  {title: "1st anniversary",type: "login",  characters: ["南"],memo: "（３）南まほでロリトデポロ" },
-  {title: "1st anniversary",type: "login",  characters: ["西"],memo: "（４）西まほでパエリア？？" },
-  {title: "1st anniversary",type: "login",  characters: ["中央"],memo: "（５）中央まほでロブスター料理" },
+  {title: "1st anniversary",type: "login",  characters: ["北"],memo: "（１）北まほでカーケン・メテオル",date: "2020-11-20" },
+  {title: "1st anniversary",type: "login",  characters: ["東"],memo: "（２）東まほでミモザサラダ" ,date: "2020-11-20"},
+  {title: "1st anniversary",type: "login",  characters: ["南"],memo: "（３）南まほでロリトデポロ",date: "2020-11-20" },
+  {title: "1st anniversary",type: "login",  characters: ["西"],memo: "（４）西まほでパエリア？？" ,date: "2020-11-20"},
+  {title: "1st anniversary",type: "login",  characters: ["中央"],memo: "（５）中央まほでロブスター料理" ,date: "2020-11-20"},
 
-  {title: "1.5 anniversary",type: "login",  characters: ["スノウ","ホワイト","フィガロ"],memo: "（１）年長者たちで他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["ファウスト","レノックス"],memo: "（２）元主従の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["ブラッドリー","ネロ"],memo: "（３）元相棒の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["シャイロック","ムル"],memo: "（４）愛憎の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["オズ","アーサー"],memo: "（１０）強い絆の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["リケ","ミチル"],memo: "（５）仲良しの二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["ミスラ","ルチル"],memo: "（６）縁ある二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（７）師弟の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["カイン","オーエン"],memo: "（８）因縁の二人で他己紹介" },
-  {title: "1.5 anniversary",type: "login",  characters: ["シノ","ヒースクリフ"],memo: "（９）幼馴染の二人で他己紹介" },
+  {title: "1.5 anniversary",type: "login",  characters: ["スノウ","ホワイト","フィガロ"],memo: "（１）年長者たちで他己紹介",date: "2021-05-21" },
+  {title: "1.5 anniversary",type: "login",  characters: ["ファウスト","レノックス"],memo: "（２）元主従の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["ブラッドリー","ネロ"],memo: "（３）元相棒の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["シャイロック","ムル"],memo: "（４）愛憎の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["オズ","アーサー"],memo: "（１０）強い絆の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["リケ","ミチル"],memo: "（５）仲良しの二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["ミスラ","ルチル"],memo: "（６）縁ある二人で他己紹介",date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（７）師弟の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["カイン","オーエン"],memo: "（８）因縁の二人で他己紹介" ,date: "2021-05-21"},
+  {title: "1.5 anniversary",type: "login",  characters: ["シノ","ヒースクリフ"],memo: "（９）幼馴染の二人で他己紹介" ,date: "2021-05-21"},
 
  
  
-  {title: "2.5 anniversary",type: "login",  characters: ["西"],memo: "（１）西のパジャマパーティーwith恋バナ" },
-  {title: "2.5 anniversary",type: "login",  characters: ["中央"],memo: "（２）中央のパジャマパーティーwith大きなベッド" },
-  {title: "2.5 anniversary",type: "login",  characters: ["東"],memo: "（３）東のパジャマパーティーwith…………。" },
-  {title: "2.5 anniversary",type: "login",  characters: ["南"],memo: "（４）南のパジャマパーティーwith昔話" },
-  {title: "2.5 anniversary",type: "login",  characters: ["北"],memo: "（５）北のパジャマパーティーwith怪談話" },
+  {title: "2.5 anniversary",type: "login",  characters: ["西"],memo: "（１）西のパジャマパーティーwith恋バナ",date: "2022-05-20" },
+  {title: "2.5 anniversary",type: "login",  characters: ["中央"],memo: "（２）中央のパジャマパーティーwith大きなベッド",date: "2022-05-20" },
+  {title: "2.5 anniversary",type: "login",  characters: ["東"],memo: "（３）東のパジャマパーティーwith…………。",date: "2022-05-20" },
+  {title: "2.5 anniversary",type: "login",  characters: ["南"],memo: "（４）南のパジャマパーティーwith昔話" ,date: "2022-05-20"},
+  {title: "2.5 anniversary",type: "login",  characters: ["北"],memo: "（５）北のパジャマパーティーwith怪談話" ,date: "2022-05-20"},
   
-  {title: "3.5 anniversary",type: "login",  characters: ["アーサー","ミスラ","ファウスト","ムル"],memo: "（１）休みの日を一緒に過ごすなら？：Let's go オズの城" },
-  {title: "3.5 anniversary",type: "login",  characters: ["オズ","スノウ","シノ","ラスティカ","レノックス"],memo: "（２）突っ込み不在：ペットを飼うなら？：みんなのペット" },
-  {title: "3.5 anniversary",type: "login",  characters: ["ホワイト","ヒースクリフ","フィガロ","ルチル"],memo: "（３）ファンサ：パーティをするなら？：水中パーティ" },
-  {title: "3.5 anniversary",type: "login",  characters: ["カイン","リケ","ネロ","シャイ"],memo: "（４）おめでとうのポーズ：一緒に料理をするなら？：BBQ+クレープ風" },
-  {title: "3.5 anniversary",type: "login",  characters: ["オーエン","ブラッドリー","クロエ","ミチル"],memo: "（５）誕生日の話：お揃いの衣装を着るなら？：誰が軸でも" },
+  {title: "3.5 anniversary",type: "login",  characters: ["アーサー","ミスラ","ファウスト","ムル"],memo: "（１）休みの日を一緒に過ごすなら？：Let's go オズの城" ,date: "2023-05-19"},
+  {title: "3.5 anniversary",type: "login",  characters: ["オズ","スノウ","シノ","ラスティカ","レノックス"],memo: "（２）突っ込み不在：ペットを飼うなら？：みんなのペット" ,date: "2023-05-19"},
+  {title: "3.5 anniversary",type: "login",  characters: ["ホワイト","ヒースクリフ","フィガロ","ルチル"],memo: "（３）ファンサ：パーティをするなら？：水中パーティ",date: "2023-05-19" },
+  {title: "3.5 anniversary",type: "login",  characters: ["カイン","リケ","ネロ","シャイ"],memo: "（４）おめでとうのポーズ：一緒に料理をするなら？：BBQ+クレープ風" ,date: "2023-05-19"},
+  {title: "3.5 anniversary",type: "login",  characters: ["オーエン","ブラッドリー","クロエ","ミチル"],memo: "（５）誕生日の話：お揃いの衣装を着るなら？：誰が軸でも" ,date: "2023-05-19"},
 
 
 
 
 
-  {title: "5th anniversary",type: "login",  characters: ["中央"],memo: "（１）中央で絶景カフェin赤坂?名古屋?" },
-  {title: "5th anniversary",type: "login",  characters: ["北"],memo: "（２）北でセキュリティ会社in北海道" },
-  {title: "5th anniversary",type: "login",  characters: ["東"],memo: "（３）東で温泉旅館in東温泉" },
-  {title: "5th anniversary",type: "login",  characters: ["西"],memo: "（４）西で探偵事務所in与那国島" },
-  {title: "5th anniversary",type: "login",  characters: ["南"],memo: "（５）南で病院in雲南市(島根)" },
-  {title: "魔法使いに花束を",type: "login",  characters: ["全員"],memo: "賢者様にも花束を" },
-  {title: "魔法使いに花束を",type: "login",  characters: ["その他","カナリア","クックロビン"],memo: "魔法使いに花束を" },
+  {title: "5th anniversary",type: "login",  characters: ["中央"],memo: "（１）中央で絶景カフェin赤坂?名古屋?",date: "2024-11-17" },
+  {title: "5th anniversary",type: "login",  characters: ["北"],memo: "（２）北でセキュリティ会社in北海道",date: "2024-11-17" },
+  {title: "5th anniversary",type: "login",  characters: ["東"],memo: "（３）東で温泉旅館in東温泉",date: "2024-11-17" },
+  {title: "5th anniversary",type: "login",  characters: ["西"],memo: "（４）西で探偵事務所in与那国島",date: "2024-11-17" },
+  {title: "5th anniversary",type: "login",  characters: ["南"],memo: "（５）南で病院in雲南市(島根)" ,date: "2024-11-17"},
+  {title: "魔法使いに花束を",type: "login",  characters: ["全員"],memo: "賢者様にも花束を" ,date: "2024-11-17"},
+  {title: "魔法使いに花束を",type: "login",  characters: ["その他","カナリア","クックロビン"],memo: "魔法使いに花束を" ,date: "2024-11-17"},
 
 
 
-  {title: "6th anniversary",type: "login",  characters: ["中央"],memo: "（１）中央と賢者(爪・文字・故郷・過ごす時間)" },
-  {title: "6th anniversary",type: "login",  characters: ["南"],memo: "（２）南と賢者(緊張・瞳・箒散歩・病気の知識)" },
-  {title: "6th anniversary",type: "login",  characters: ["西"],memo: "（３）西と賢者(花火・お菓子と追いかけっこ・布と追いかけっこ・歌う魔女)" },
-  {title: "6th anniversary",type: "login",  characters: ["東"],memo: "（４）東と賢者(魔道具・朝の市場・居眠り・隣にいる)" },
-  {title: "6th anniversary",type: "login",  characters: ["北"],memo: "（５）北と賢者(大人は辛い・俺を信じろ・動物が好きだよね・究極進化超覚醒羊)" },
+  {title: "6th anniversary",type: "login",  characters: ["中央"],memo: "（１）中央と賢者(爪・文字・故郷・過ごす時間)" ,date: "2025-11-14"},
+  {title: "6th anniversary",type: "login",  characters: ["南"],memo: "（２）南と賢者(緊張・瞳・箒散歩・病気の知識)" ,date: "2025-11-14"},
+  {title: "6th anniversary",type: "login",  characters: ["西"],memo: "（３）西と賢者(花火・お菓子と追いかけっこ・布と追いかけっこ・歌う魔女)" ,date: "2025-11-14"},
+  {title: "6th anniversary",type: "login",  characters: ["東"],memo: "（４）東と賢者(魔道具・朝の市場・居眠り・隣にいる)",date: "2025-11-14" },
+  {title: "6th anniversary",type: "login",  characters: ["北"],memo: "（５）北と賢者(大人は辛い・俺を信じろ・動物が好きだよね・究極進化超覚醒羊)" ,date: "2025-11-14"},
 
 
  
  //新年
-  {title: "New  Year!新年の過ごし方 2020",type: "login",  characters: ["中央"],memo: "中央：あけおめ、ことよろ" },
-  {title: "New  Year!新年の過ごし方 2020",type: "login",  characters: ["西"],memo: "西：たこあげは嫌" },
-  {title: "New  Year!新年の過ごし方 2020",type: "login",  characters: ["東"],memo: "東：おせち？？？？" },
-  {title: "New  Year!新年の過ごし方 2020",type: "login",  characters: ["北"],memo: "北：獅子舞で運試し" },
-  {title: "New  Year!新年の過ごし方 2020",type: "login",  characters: ["南"],memo: "南：お年玉事件" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["中央"],memo: "中央：あけおめ、ことよろ",date: "2020-01-01" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["西"],memo: "西：たこあげは嫌" ,date: "2020-01-01"},
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["東"],memo: "東：おせち？？？？" ,date: "2020-01-01"},
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["北"],memo: "北：獅子舞で運試し",date: "2020-01-01" },
+  {title: "New  Year!新年の過ごし方",type: "login",  characters: ["南"],memo: "南：お年玉事件" ,date: "2020-01-01"},
 
-  {title: "新年の催し 2023",type: "login",  characters: ["全員"],memo: "（１）お正月ごっこ/こたつ?でごろごろ?" },
-  {title: "新年の催し 2023",type: "login",  characters: ["全員"],memo: "（２）流行り言葉大賞：おそかわ・紅茶・歌・花火" },
-  {title: "新年の催し 2023",type: "login",  characters: ["全員"],memo: "（３）かくし芸大会(＝どんな魔法を使ったでしょう)：愛憎・元相棒・兄弟・つよきず" },
-  {title: "新年の催し 2023",type: "login",  characters: ["全員"],memo: "（４）新春歌合戦：『漆黒の暁』『りんごと血しぶき』『肩まで』" },
-  {title: "新年の催し 2023",type: "login",  characters: ["全員"],memo: "（５）『同じ視点で見ていた』『さらさらちゃん』『巻き毛ちゃん』" },
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（１）お正月ごっこ/こたつ?でごろごろ?" ,date: "2023-01-01"},
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（２）流行り言葉大賞：おそかわ・紅茶・歌・花火" ,date: "2023-01-01"},
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（３）かくし芸大会(＝どんな魔法を使ったでしょう)：愛憎・元相棒・兄弟・つよきず" ,date: "2023-01-01"},
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（４）新春歌合戦：『漆黒の暁』『りんごと血しぶき』『肩まで』" ,date: "2023-01-01"},
+  {title: "新年の催し",type: "login",  characters: ["全員"],memo: "（５）『同じ視点で見ていた』『さらさらちゃん』『巻き毛ちゃん』" ,date: "2023-01-01"},
 
-  {title: "New Year!ホリデーCP 2026",type: "login",  characters: ["中央"],memo: "（１）中央で魔法舎カルタ" },
-  {title: "New Year!ホリデーCP 2026",type: "login",  characters: ["東","西"],memo: "（２）西と東で福袋" },
-  {title: "New Year!ホリデーCP 2026",type: "login",  characters: ["北","南"],memo: "（３）北と南でおみくじ" },
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["中央"],memo: "（１）中央で魔法舎カルタ" ,date: "2026-01-01"},
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["東","西"],memo: "（２）西と東で福袋" ,date: "2026-01-01"},
+  {title: "New Year!ホリデーCP",type: "login",  characters: ["北","南"],memo: "（３）北と南でおみくじ" ,date: "2026-01-01"},
 
 
 
 
 
  //イベント 
-  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["西"],memo: "（１）西の魔法使いの休み方" },
-  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["東"],memo: "（２）東の魔法使いの休み方" },
-  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["北"],memo: "（３）北の魔法使いで褒め褒めゲーム" },
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["西"],memo: "（１）西の魔法使いの休み方" ,date: "2019-12-20"},
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["東"],memo: "（２）東の魔法使いの休み方" ,date: "2019-12-20"},
+  {title: "正義と祝祭のプレリュード",type: "login",  characters: ["北"],memo: "（３）北の魔法使いで褒め褒めゲーム",date: "2019-12-20" },
 
-  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["シノ","ネロ","ラスティカ"],memo: "（１）シノのための『地下宮殿に行きたかったのに』作詞作曲ラスティカwithネロ" },
-  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["オズ","カイン","ヒースクリフ"],memo: "（２）カイン的オズとの距離の詰め方と、ヒースのハードル" },
-  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["アーサー","ムル","クロエ"],memo: "（３）小さくなってサプライズ" },
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["シノ","ネロ","ラスティカ"],memo: "（１）シノのための『地下宮殿に行きたかったのに』作詞作曲ラスティカwithネロ",date: "2020-11-06" },
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["オズ","カイン","ヒースクリフ"],memo: "（２）カイン的オズとの距離の詰め方と、ヒースのハードル",date: "2020-11-06" },
+  {title: "勇敢な開拓者のバラッド",type: "login",  characters: ["アーサー","ムル","クロエ"],memo: "（３）小さくなってサプライズ" ,date: "2020-11-06"},
 
-  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["アーサー","クロエ","ラスティカ"],memo: "（１）夢の卵のお洋服" },
-  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["オズ","リケ","ルチル"],memo: "（２）ゆで卵と生卵" },
-  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["シャイロック","レノックス"],memo: "（３）早起きと夜更かし。エッグノックを添えて" },
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["アーサー","クロエ","ラスティカ"],memo: "（１）夢の卵のお洋服",date: "2022-02-20" },
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["オズ","リケ","ルチル"],memo: "（２）ゆで卵と生卵" ,date: "2022-02-20"},
+  {title: "銀宿る卵屋のファンタジア",type: "login",  characters: ["シャイロック","レノックス"],memo: "（３）早起きと夜更かし。エッグノックを添えて" ,date: "2022-02-20"},
   
-  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["シノ","ネロ","ルチル"],memo: "（１）アップルパイと応援" },
-  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["リケ","ミスラ","ラスティカ"],memo: "（２）リケのお勉強と芝居ごっこ" },
-  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["ブラッドリー","シャイロック"],memo: "（３）真昼のお誘い" },
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["シノ","ネロ","ルチル"],memo: "（１）アップルパイと応援" ,date: "2023-03-23"},
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["リケ","ミスラ","ラスティカ"],memo: "（２）リケのお勉強と芝居ごっこ",date: "2023-03-23" },
+  {title: "輝く剣に太陽の夢を",type: "login",  characters: ["ブラッドリー","シャイロック"],memo: "（３）真昼のお誘い",date: "2023-03-23" },
 
-  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ネロ","ムル","ミチル"],memo: "（１）高級食材オルフェの巣" },
-  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["リケ","ミスラ","クロエ"],memo: "（２）執事ごっこ『帰ってきなさい、ご主人様』" },
-  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ブラッドリー","フィガロ"],memo: "（３）きみも執事にならないか？ホワイトのご機嫌取り" },
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ネロ","ムル","ミチル"],memo: "（１）高級食材オルフェの巣",date: "2024-04-23"},
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["リケ","ミスラ","クロエ"],memo: "（２）執事ごっこ『帰ってきなさい、ご主人様』" ,date: "2024-04-23"},
+  {title: "薔薇の君臨と自由のソナチネ",type: "login",  characters: ["ブラッドリー","フィガロ"],memo: "（３）きみも執事にならないか？ホワイトのご機嫌取り" ,date: "2024-04-23"},
 
-  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ファウスト","シノ","ルチル"],memo: "（１）もう買ってある新聞と見出しの予想" },
-  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["アーサー","オーエン"],memo: "（２）ショートケーキは欠かさずに" },
-  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ホワイト","ブラッドリー","レノックス"],memo: "（３）レノの心からの賞賛で" },
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ファウスト","シノ","ルチル"],memo: "（１）もう買ってある新聞と見出しの予想" ,date: "2024-09-18"},
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["アーサー","オーエン"],memo: "（２）ショートケーキは欠かさずに" ,date: "2024-09-18"},
+  {title: "散花奏でる涙のオブリガード",type: "login",  characters: ["ホワイト","ブラッドリー","レノックス"],memo: "（３）レノの心からの賞賛で" ,date: "2024-09-18"},
 
-  {title: "デジールに真紅のリボンを",type: "login",  characters: ["アーサー","ミスラ","ネロ"],memo: "（１）がぶっと豪快に" },
-  {title: "デジールに真紅のリボンを",type: "login",  characters: ["オーエン","ルチル"],memo: "（２）甘くないケーキは" },
-  {title: "デジールに真紅のリボンを",type: "login",  characters: ["カイン","リケ","ファウスト"],memo: "（３）クリスマスの飾り付けと東の魔法使いらしさ" },
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["アーサー","ミスラ","ネロ"],memo: "（１）がぶっと豪快に",date: "2024-12-17" },
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["オーエン","ルチル"],memo: "（２）甘くないケーキは" ,date: "2024-12-17"},
+  {title: "デジールに真紅のリボンを",type: "login",  characters: ["カイン","リケ","ファウスト"],memo: "（３）クリスマスの飾り付けと東の魔法使いらしさ",date: "2024-12-17" },
 
-  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["スノウ","ファウスト","クロエ"],memo: "（１）大富豪スノウwithクロエ・ファウスト" },
-  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["オズ","リケ","オーエン"],memo: "（２）甘いコーヒーに手間をかけて" },
-  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["カイン","ラスティカ"],memo: "（３）コーヒーとパスタと最高の応援" },
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["スノウ","ファウスト","クロエ"],memo: "（１）大富豪スノウwithクロエ・ファウスト" ,date: "2025-10-29"},
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["オズ","リケ","オーエン"],memo: "（２）甘いコーヒーに手間をかけて" ,date: "2025-10-29"},
+  {title: "珈琲香る日々を重ねて",type: "login",  characters: ["カイン","ラスティカ"],memo: "（３）コーヒーとパスタと最高の応援" ,date: "2025-10-29"},
 
-  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["アーサー","ミチル"],memo: "（１）サンタさんの正体は？" },
-  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ミスラ","シノ","フィガロ"],memo: "（２）いい子の基準は？" },
-  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ヒースクリフ","シャイロック","レノックス"],memo: "（３）幹事のためのプレゼントを" },
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["アーサー","ミチル"],memo: "（１）サンタさんの正体は？" ,date: "2025-12-17"},
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ミスラ","シノ","フィガロ"],memo: "（２）いい子の基準は？",date: "2025-12-17" },
+  {title: "魔法舎のクリスマスソワレ",type: "login",  characters: ["ヒースクリフ","シャイロック","レノックス"],memo: "（３）幹事のためのプレゼントを" ,date: "2025-12-17"},
 
   
-  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["ホワイト","ムル"],memo: "（１）ぶるぶるローズの特性ジュース" },
-  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（２）本物はきみの笑顔の輝きだけで" },
-  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["カイン","ブラッドリー"],memo: "（３）本物の宝石を見抜いて" },
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["ホワイト","ムル"],memo: "（１）ぶるぶるローズの特性ジュース" ,date: "2026-01-11"},
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["クロエ","ラスティカ"],memo: "（２）本物はきみの笑顔の輝きだけで",date: "2026-01-11" },
+  {title: "偽証の怖畏と本性のソナチネ",type: "login",  characters: ["カイン","ブラッドリー"],memo: "（３）本物の宝石を見抜いて",date: "2026-01-11" },
 
- 
+  {title: "ときめきの実に愛の言葉を",type: "login",  characters: ["オズ","アーサー"],memo: "（１）チョコレート作りとシュガー" ,date:"2026-02-03"},
+  {title: "ときめきの実に愛の言葉を",type: "login",  characters: ["リケ","スノウ","ファウスト"],memo: "（２）お土産をもらう準備を" ,date:"2026-02-03"},
+  {title: "ときめきの実に愛の言葉を",type: "login",  characters: ["ミスラ","ムル","フィガロ"],memo: "（３）俺たちのファンに" ,date:"2026-02-03"},
+
  //その他
-   {title: "空の下のティータイム",type: "login",  characters: ["ミスラ","ブラッドリー","ファウスト","ムル","ミチル"],memo: "～白雪舞うある日の一杯～" },
-   {title: "酒場で尽きないお喋りを",type: "login",  characters: ["オズ","ブラッドリー","ファウスト","シャイロック","ルチル"],memo: "報告書とグラタンと尽きないお喋りを" },
+   {title: "空の下のティータイム",type: "login",  characters: ["ミスラ","ブラッドリー","ファウスト","ムル","ミチル"],memo: "～白雪舞うある日の一杯～" ,date: "2025-12-12"},
+   {title: "酒場で尽きないお喋りを",type: "login",  characters: ["オズ","ブラッドリー","ファウスト","シャイロック","ルチル"],memo: "報告書とグラタンと尽きないお喋りを",date:"2026-01-23" },
 
 
 
@@ -912,7 +978,6 @@ const stories = [
   {title: "旅行プラン",type: "personal",  characters: ["西"],memo: "ムル" },
 
 
-
 ];
 
 
@@ -932,6 +997,10 @@ function searchByName(name) {
 function searchStories() {
   const resultArea = document.getElementById("result");
   resultArea.innerHTML = "";
+ 
+  const sortButtonsArea = document.getElementById("sortButtons");
+  sortButtonsArea.style.display =
+    activeType === "login" ? "block" : "none";
 
   const selectedNumberGroups = Array.from(activeNumbers); // 番号・複合
   const selectedNames = Array.from(activeNames);          // 名前のみ
@@ -962,6 +1031,26 @@ if (selectedNames.length > 0) {
     return true;
   });
 
+
+
+  // ログインのみ日付ソート
+if (activeSort && activeType === "login") {
+  results.sort((a, b) => {
+    const da = new Date(a.date || "1900-01-01");
+    const db = new Date(b.date || "1900-01-01");
+
+    return activeSort === "new" ? db - da : da - db;
+  });
+}
+if (activeType !== "login") {
+  activeSort = null;
+  document.querySelectorAll("#sortButtons button")
+    .forEach(btn => btn.classList.remove("active"));
+}
+
+
+
+
   if (results.length === 0) {
     resultArea.textContent = "該当するストーリーはありません";
     return;
@@ -975,6 +1064,7 @@ if (selectedNames.length > 0) {
     <h3>${story.title}</h3>
     <span class="story-type ${story.type}">
         ${story.type === "login" ? "ログイン" : "個人"}
+      
     </span>
   </div>
 
@@ -983,6 +1073,7 @@ if (selectedNames.length > 0) {
 
   <div class="characters">
     登場人物：${story.characters.join("、")}
+    <p class="date">${story.date}</p>
   </div>
 
   </div>
@@ -1027,3 +1118,4 @@ resetButton.onclick = () => {
 
 </body>
 </html>
+
