@@ -1889,11 +1889,11 @@ const images = [
   text: ` 憩い｜束の間でも、憩いを味わってほしい。雄大な自然を思わせる瞳を、優しく細めて。さあ、おかけください。
           将来｜さあ、おかけください。微笑んだ瞳は、悠久の自然のようで。……あなたが編んだ道の先を、私は歩いている。
           2025/8/28`,
-  tags: [ "あらすじ","レノックス","アーサー", "安息の椅子と誠心のソナチネ", "2025", "⑥⑦"]
+  tags: [ "あらすじ","レノックス","アーサー", "安息の椅子と誠心のソナチネ","エディ(魔法使い)", "2025", "⑥⑦"]
 },
   {file: "129_clothes.jpg",
        buttonConfig: { SSR: 2,  R: 2 },         
-  tags: [ "服", "レノックス","アーサー",  "安息の椅子と誠心のソナチネ", "2025", "⑥⑦"]
+  tags: [ "服", "レノックス","アーサー",  "安息の椅子と誠心のソナチネ","エディ(魔法使い)", "2025", "⑥⑦"]
 },
   {file: "130_about.jpg",
   titleWords: ["アクアマリン", "月桂樹"],
@@ -2128,6 +2128,7 @@ function searchImages(){
         const tagWrap = document.createElement("div");
         tagWrap.className = "tag-wrap";
         tagWrap.style.display = showTags ? "flex" : "none";
+         tags.style.width = "300px";  
         data.tags.forEach(tag => {
           const span = document.createElement("span");
           span.className = "tag";
