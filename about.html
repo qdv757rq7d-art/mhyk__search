@@ -193,6 +193,24 @@ body {
   color: #8a1f1f;
 }
 
+#showFavoritesBtn {
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 2px solid #31708f;
+  background: #d9edf7;
+  color: #31708f;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* お気に入り表示中 */
+#showFavoritesBtn.active {
+  background: #fde2e2;
+  border-color: #8a1f1f;
+  color: #8a1f1f;
+}
+
 
 </style>
 </head>
@@ -210,6 +228,8 @@ body {
 <div id="sortButtons">
   <button id="sortToggleBtn">新しい順</button>
 </div>
+<button id="showFavoritesBtn">お気に入りだけ表示</button>
+
 <hr>
 <button id="toggleNumberButtons">魔法使いを非表示</button>
 <div id="numberButtons"></div>
@@ -347,6 +367,36 @@ resetButton.style.fontWeight = "bold";
 // キャラボタンの後に追加
 numberButtons.appendChild(resetButton);
 
+// ← この位置に resetButton.onclick を書く
+resetButton.onclick = () => {
+  activeNumbers.clear();
+  activeNames.clear();
+  activeType = null;
+
+  numberButtons.querySelectorAll("button").forEach(btn => {
+    if (btn !== resetButton) {
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    }
+  });
+
+  nameButtons.querySelectorAll("button").forEach(btn => {
+    if (btn !== resetNameButton) {
+      btn.classList.remove("active");
+      btn.style.background = "";
+      btn.style.color = "";
+    }
+  });
+
+  document.querySelectorAll("#typeButtons button").forEach(btn => {
+    btn.classList.remove("active");
+    btn.style.background = "";
+    btn.style.color = "";
+  });
+
+  searchStories();
+};
 
 
 //================ キャラボタン２ =================
@@ -470,6 +520,24 @@ sortToggleBtn.onclick = () => {
     activeSort = "new";
     sortToggleBtn.textContent = "新しい順";
     sortToggleBtn.classList.remove("old");
+  }
+
+  searchStories();
+};
+
+const showFavoritesBtn = document.getElementById("showFavoritesBtn");
+let showOnlyFavorites = false;
+
+showFavoritesBtn.onclick = () => {
+  showOnlyFavorites = !showOnlyFavorites;
+
+  // ボタンの見た目切替
+  if (showOnlyFavorites) {
+    showFavoritesBtn.textContent = "すべて表示";
+    showFavoritesBtn.classList.add("active");
+  } else {
+    showFavoritesBtn.textContent = "お気に入りだけ表示";
+    showFavoritesBtn.classList.remove("active");
   }
 
   searchStories();
@@ -990,29 +1058,28 @@ function searchByName(name) {
   );
   showResult(result, name);
 }
+// favorites を保持
+const favorites = new Set();
+// localStorage から復元
+JSON.parse(localStorage.getItem("favorites") || "[]").forEach(title => favorites.add(title));
 
-/* =========================
-   結果表示（統合版）
-========================= */
+// 検索・表示関数
 function searchStories() {
   const resultArea = document.getElementById("result");
   resultArea.innerHTML = "";
- 
-  const sortButtonsArea = document.getElementById("sortButtons");
-  sortButtonsArea.style.display =
-    activeType === "login" ? "block" : "none";
 
-  const selectedNumberGroups = Array.from(activeNumbers); // 番号・複合
-  const selectedNames = Array.from(activeNames);          // 名前のみ
+  const selectedNumberGroups = Array.from(activeNumbers);
+  const selectedNames = Array.from(activeNames);
 
   const results = stories.filter(story => {
+    
+    // お気に入りのみ表示の場合
+    if (showOnlyFavorites && !favorites.has(story.title)) return false;
 
-    // ① 種別フィルタ
-    if (activeType && story.type !== activeType) {
-      return false;
-    }
+    // 種別
+    if (activeType && story.type !== activeType) return false;
 
-    // ② 番号ボタン AND検索
+    // 番号 AND検索
     if (selectedNumberGroups.length > 0) {
       const okByNumber = selectedNumberGroups.every(group =>
         group.some(key => story.characters.includes(key))
@@ -1020,36 +1087,25 @@ function searchStories() {
       if (!okByNumber) return false;
     }
 
-    // ③ 名前ボタン AND検索
-if (selectedNames.length > 0) {
-    const okByName = selectedNames.every(name =>
-    story.characters.includes(name)
-  );
-  if (!okByName) return false;
-}
+    // 名前 AND検索
+    if (selectedNames.length > 0) {
+      const okByName = selectedNames.every(name =>
+        story.characters.includes(name)
+      );
+      if (!okByName) return false;
+    }
 
     return true;
   });
 
-
-
-  // ログインのみ日付ソート
-if (activeSort && activeType === "login") {
-  results.sort((a, b) => {
-    const da = new Date(a.date || "1900-01-01");
-    const db = new Date(b.date || "1900-01-01");
-
-    return activeSort === "new" ? db - da : da - db;
-  });
-}
-if (activeType !== "login") {
-  activeSort = null;
-  document.querySelectorAll("#sortButtons button")
-    .forEach(btn => btn.classList.remove("active"));
-}
-
-
-
+  // ログインは日付ソート
+  if (activeSort && activeType === "login") {
+    results.sort((a, b) => {
+      const da = new Date(a.date || "1900-01-01");
+      const db = new Date(b.date || "1900-01-01");
+      return activeSort === "new" ? db - da : da - db;
+    });
+  }
 
   if (results.length === 0) {
     resultArea.textContent = "該当するストーリーはありません";
@@ -1059,60 +1115,55 @@ if (activeType !== "login") {
   results.forEach(story => {
     const div = document.createElement("div");
     div.className = "story";
-   div.innerHTML = `
-  <div class="story-header">
-    <h3>${story.title}</h3>
-    <span class="story-type ${story.type}">
-        ${story.type === "login" ? "ログイン" : "個人"}
-      
-    </span>
-  </div>
 
-  <div class="memo">
-    『${story.memo ?? "（なし）"}』
-
-  <div class="characters">
-    登場人物：${story.characters.join("、")}
-    <p class="date">${story.date}</p>
-  </div>
-
-  </div>
-`;
+    // innerHTML で構築（★ボタン含む）
+    div.innerHTML = `
+      <div class="story-header">
+        <h3>${story.title}</h3>
+        <span class="story-type ${story.type}">${story.type === "login" ? "ログイン" : "個人"}</span>
+        <button class="favorite-btn" style="
+          margin-left:auto;
+          border:none;
+          background:none;
+          cursor:pointer;
+          font-size:25px;
+          color:${favorites.has(story.title) ? "gold" : "#ccc"};
+        ">★</button>
+      </div>
+      <div class="memo">
+        『${story.memo ?? "（なし）"}』
+        <div class="characters">
+          登場人物：${story.characters.join("、")}
+          <p class="date">${story.date ?? ""}</p>
+        </div>
+      </div>
+    `;
 
     resultArea.appendChild(div);
   });
 }
 
-resetButton.onclick = () => {
-  activeNumbers.clear();
-  activeNames.clear();
-  activeType = null;
 
-  numberButtons.querySelectorAll("button").forEach(btn => {
-    if (btn !== resetButton) {
-      btn.classList.remove("active");
-      btn.style.background = "";
-      btn.style.color = "";
-    }
-  });
+// ======================
+// イベント委譲で★ボタン制御
+// ======================
+document.getElementById("result").addEventListener("click", e => {
+  if (!e.target.classList.contains("favorite-btn")) return;
 
-  nameButtons.querySelectorAll("button").forEach(btn => {
-    if (btn !== resetNameButton) {
-      btn.classList.remove("active");
-      btn.style.background = "";
-      btn.style.color = "";
-    }
-  });
+  const storyDiv = e.target.closest(".story");
+  const title = storyDiv.querySelector("h3").textContent;
 
-  document.querySelectorAll("#typeButtons button").forEach(btn => {
-    btn.classList.remove("active");
-    btn.style.background = "";
-    btn.style.color = "";
-  });
+  if (favorites.has(title)) {
+    favorites.delete(title);
+    e.target.style.color = "#ccc"; // お気に入り解除
+  } else {
+    favorites.add(title);
+    e.target.style.color = "gold"; // お気に入り登録
+  }
 
-  searchStories();
-};
-
+  // 保存
+  localStorage.setItem("favorites", JSON.stringify([...favorites]));
+});
 
 </script>
 
